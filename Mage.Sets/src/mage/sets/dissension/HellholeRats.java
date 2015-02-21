@@ -25,85 +25,85 @@
  *  authors and should not be interpreted as representing official policies, either expressed
  *  or implied, of BetaSteward_at_googlemail.com.
  */
-package mage.sets.planechase;
+package mage.sets.dissension;
 
 import java.util.UUID;
-
-import mage.constants.CardType;
-import mage.constants.Rarity;
+import mage.MageInt;
 import mage.abilities.Ability;
-import mage.abilities.costs.Cost;
-import mage.abilities.costs.common.DiscardTargetCost;
+import mage.abilities.common.EntersBattlefieldTriggeredAbility;
 import mage.abilities.effects.OneShotEffect;
-import mage.abilities.effects.common.DrawCardSourceControllerEffect;
+import mage.abilities.keyword.HasteAbility;
+import mage.cards.Card;
 import mage.cards.CardImpl;
+import mage.cards.Cards;
+import mage.constants.CardType;
 import mage.constants.Outcome;
-import mage.filter.FilterCard;
-import mage.filter.predicate.mageobject.CardTypePredicate;
+import mage.constants.Rarity;
 import mage.game.Game;
 import mage.players.Player;
-import mage.target.common.TargetCardInHand;
+import mage.target.TargetPlayer;
 
 /**
  *
  * @author jeffwadsworth
  */
-public class ThirstForKnowledge extends CardImpl {
+public class HellholeRats extends CardImpl {
 
-    public ThirstForKnowledge(UUID ownerId) {
-        super(ownerId, 14, "Thirst for Knowledge", Rarity.UNCOMMON, new CardType[]{CardType.INSTANT}, "{2}{U}");
-        this.expansionSetCode = "HOP";
+    public HellholeRats(UUID ownerId) {
+        super(ownerId, 113, "Hellhole Rats", Rarity.UNCOMMON, new CardType[]{CardType.CREATURE}, "{2}{B}{R}");
+        this.expansionSetCode = "DIS";
+        this.subtype.add("Rat");
+        this.power = new MageInt(2);
+        this.toughness = new MageInt(2);
 
-        this.color.setBlue(true);
+        // Haste
+        this.addAbility(HasteAbility.getInstance());
 
-        // Draw three cards. Then discard two cards unless you discard an artifact card.
-        this.getSpellAbility().addEffect(new DrawCardSourceControllerEffect(3));
-        this.getSpellAbility().addEffect(new ThirstforKnowledgeEffect());
+        // When Hellhole Rats enters the battlefield, target player discards a card. Hellhole Rats deals damage to that player equal to that card's converted mana cost.
+        Ability ability = new EntersBattlefieldTriggeredAbility(new HellholeRatsEffect(), false);
+        ability.addTarget(new TargetPlayer());
+        this.addAbility(ability);
+
     }
 
-    public ThirstForKnowledge(final ThirstForKnowledge card) {
+    public HellholeRats(final HellholeRats card) {
         super(card);
     }
 
     @Override
-    public ThirstForKnowledge copy() {
-        return new ThirstForKnowledge(this);
+    public HellholeRats copy() {
+        return new HellholeRats(this);
     }
 }
 
-class ThirstforKnowledgeEffect extends OneShotEffect {
+class HellholeRatsEffect extends OneShotEffect {
 
-    public ThirstforKnowledgeEffect() {
+    public HellholeRatsEffect() {
         super(Outcome.Damage);
-        staticText = "Then discard two cards unless you discard an artifact card";
+        this.staticText = "target player discards a card. {this} deals damage to that player equal to that card's converted mana cost";
     }
 
-    public ThirstforKnowledgeEffect(final ThirstforKnowledgeEffect effect) {
+    public HellholeRatsEffect(final HellholeRatsEffect effect) {
         super(effect);
     }
 
     @Override
-    public ThirstforKnowledgeEffect copy() {
-        return new ThirstforKnowledgeEffect(this);
+    public HellholeRatsEffect copy() {
+        return new HellholeRatsEffect(this);
     }
 
     @Override
     public boolean apply(Game game, Ability source) {
-        Player you = game.getPlayer(source.getControllerId());
-        FilterCard filter = new FilterCard("artifact to discard");
-        filter.add(new CardTypePredicate(CardType.ARTIFACT));
-        if (you != null
-                && you.getHand().count(filter, game) > 0
-                && you.chooseUse(Outcome.Discard, "Do you want to discard an artifact?  If you don't, you must discard 2 cards", game)) {
-            Cost cost = new DiscardTargetCost(new TargetCardInHand(filter));
-            if (cost.canPay(source, source.getSourceId(), you.getId(), game)) {
-                if (cost.pay(source, game, source.getSourceId(), you.getId(), false)) {
-                    return true;
+        int damage = 0;
+        Player targetPlayer = game.getPlayer(targetPointer.getFirst(game, source));
+        if (targetPlayer != null) {
+            Cards cards = targetPlayer.discard(1, false, source, game);
+            if (!cards.isEmpty()) {
+                for (Card card : cards.getCards(game)) {
+                    damage = card.getManaCost().convertedManaCost();
                 }
+                targetPlayer.damage(damage, source.getSourceId(), game, false, true);
             }
-        }
-        if (you != null) {
-            you.discard(2, false, source, game);
             return true;
         }
         return false;
